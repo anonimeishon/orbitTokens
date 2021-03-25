@@ -37,7 +37,8 @@ const attachUser = (req, res, next) => {
   }
 }
 
-app.use(attachUser);
+//TODO uncomment thislol
+// app.use(attachUser);
 
 const checkJwt = jwt({
   secret: process.env.JWT_SECRET,
