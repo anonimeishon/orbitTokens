@@ -1,4 +1,5 @@
 require('dotenv').config();
+
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -8,7 +9,7 @@ const mongoose = require('mongoose');
 const dashboardData = require('./data/dashboard');
 const User = require('./data/User');
 const InventoryItem = require('./data/InventoryItem');
-
+const jwt = require('express-jwt');
 const {
   createToken,
   hashPassword,
@@ -20,6 +21,29 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+
+const attachUser = (req, res, next) => {
+  const token = req.headers.authorization;
+  if (!token) {
+    return res.status(401).json({ message: 'Authentication invalid' });
+  }
+  const decodedToken = jwtDecode(token.slice(7));
+
+  if (!decodedToken) {
+    return res.status(401).json({ message: 'There was a problem authorizing the request' });
+  } else {
+    req.user = decodedToken;
+    next();
+  }
+}
+
+app.use(attachUser);
+
+const checkJwt = jwt({
+  secret: process.env.JWT_SECRET,
+  issuer: 'api.orbit',
+  audience: 'api.orbit'
+})
 
 app.post('/api/authenticate', async (req, res) => {
   try {
@@ -134,9 +158,10 @@ app.post('/api/signup', async (req, res) => {
   }
 });
 
-app.get('/api/dashboard-data', (req, res) =>
-  res.json(dashboardData)
-);
+app.get('/api/dashboard-data', checkJwt, (req, res) => {
+  console.log(req.user);
+  return res.json(dashboardData)
+});
 
 app.patch('/api/user-role', async (req, res) => {
   try {
