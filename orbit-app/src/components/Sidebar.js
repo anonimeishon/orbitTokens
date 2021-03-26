@@ -46,7 +46,7 @@ const navItems = [
 ];
 
 const NavItem = ({ navItem }) => {
-  
+
 
   const location = useLocation();
   const isCurrentRoute =
@@ -84,14 +84,13 @@ const Sidebar = () => {
       </div>
       <div className="mt-20">
         {navItems.map((navItem, i) => (
-          <>
-          {authContext.isAdmin() &&
-          navItem.allowedRoles.includes(role) && (
-          <NavItemContainer key={i}>
-            <NavItem navItem={navItem} />
-          </NavItemContainer>
-          )}
-          </>
+          <span key={`span ${i}`}>
+            {navItem.allowedRoles.includes(role) && (
+              <NavItemContainer key={i}>
+                <NavItem navItem={navItem} key={i} />
+              </NavItemContainer>
+            )}
+          </ span>
         ))}
       </div>
     </section>

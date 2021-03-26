@@ -12,12 +12,10 @@ const AuthProvider = ({ children }) => {
   const history = useHistory();
 
   const [authState, setAuthState] = useState(() => {
-    const token = localStorage.getItem('token');
-    const expiresAt = localStorage.getItem('expiresAt');
-    const userInfo = localStorage.getItem('userInfo');
+    const expiresAt = sessionStorage.getItem('expiresAt');
+    const userInfo = sessionStorage.getItem('userInfo');
     return (
       {
-        token,
         expiresAt,
         userInfo: userInfo ? JSON.parse(userInfo) : {}
       });
@@ -26,26 +24,23 @@ const AuthProvider = ({ children }) => {
 
 
   useEffect(() => {
-    localStorage.setItem('token', authState.token);
-    localStorage.setItem('expiresAt', authState.expiresAt);
-    localStorage.setItem('userInfo', JSON.stringify(authState.userInfo));
+    sessionStorage.setItem('expiresAt', authState.expiresAt);
+    sessionStorage.setItem('userInfo', JSON.stringify(authState.userInfo));
+
   }, [authState])
 
-  const setAuthInfo = ({ token, userInfo, expiresAt }) => {
+  const setAuthInfo = ({ userInfo, expiresAt }) => {
     setAuthState({
-      token,
       userInfo,
       expiresAt
     });
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
     localStorage.removeItem('userInfo');
     localStorage.removeItem('expiresAt');
     setAuthState(
       {
-        token: null,
         expiresAt: null,
         userInfo: {}
       }
@@ -54,7 +49,7 @@ const AuthProvider = ({ children }) => {
   }
 
   const isAuthenticated = () => {
-    if (!authState.token || !authState.expiresAt) {
+    if (!authState.expiresAt) {
       return false;
     }
     return new Date().getTime() / 1000 < authState.expiresAt

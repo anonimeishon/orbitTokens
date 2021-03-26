@@ -1,7 +1,7 @@
 import React, {
   useEffect,
   useRef,
-  useState
+  useState,
 } from 'react';
 import {
   faCaretDown,
@@ -10,6 +10,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useAuthContext } from './../context/AuthContext';
 import defaultAvatar from './../images/defaultAvatar.png';
+import { useFetchContext } from '../context/FetchContext'
 
 const DropdownItem = ({ item }) => (
   <button
@@ -36,16 +37,27 @@ const DropdownContent = ({ dropdownItems }) => {
 };
 
 const AvatarDropdown = () => {
+  const fetchContext = useFetchContext();
   const node = useRef();
   const auth = useAuthContext();
-  const {authState} = auth;
+  const { authState } = auth;
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const dropdownItems = [
     {
       title: 'Log Out',
       icon: faSignOutAlt,
-      onClick: auth.logout
+      onClick: async () => {
+        try {
+          auth.logout();
+          const { data } = await fetchContext.authAxios.post(
+            'logout'
+          );
+        } catch (err) {
+          throw (err.response.data.message);
+        }
+
+      }
     }
   ];
 
