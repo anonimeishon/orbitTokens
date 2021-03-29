@@ -46,20 +46,27 @@ app.post('/api/authenticate', async (req, res) => {
       const { password, bio, ...rest } = user;
       const userInfo = Object.assign({}, { ...rest });
 
-      const token = createToken(userInfo);
+      const refreshToken = createToken(userInfo, "8h"); // 8 hours
+      const accessToken = createToken(userInfo, "3000"); //15 mins
+      const decodedRefreshToken = jwtDecode(refreshToken);
+      const decodedAccessToken = jwtDecode(accessToken);
 
-      const decodedToken = jwtDecode(token);
-      const expiresAt = decodedToken.exp;
+      const refreshExpiresAt = decodedRefreshToken.exp;
+      const accessExpiresAt = decodedAccessToken.exp;
 
-      res.cookie('token', token, {
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true
+      })
+      res.cookie('accessToken', accessToken, {
         httpOnly: true
       })
 
+
       res.json({
         message: 'Authentication successful!',
-        token,
         userInfo,
-        expiresAt
+        refreshExpiresAt,
+        accessExpiresAt
       });
     } else {
       res.status(403).json({
@@ -104,9 +111,14 @@ app.post('/api/signup', async (req, res) => {
     const savedUser = await newUser.save();
 
     if (savedUser) {
-      const token = createToken(savedUser);
-      const decodedToken = jwtDecode(token);
-      const expiresAt = decodedToken.exp;
+      const refreshToken = createToken(savedUser, "8h");
+      const accessToken = createToken(savedUser, "3000")
+
+      const decodedRefreshToken = jwtDecode(refreshToken);
+      const decodedAccessToken = jwtDecode(accessToken);
+
+      const refreshExpiresAt = decodedRefreshToken.exp;
+      const accessExpiresAt = decodedAccessToken.exp;
 
       const {
         firstName,
@@ -121,15 +133,18 @@ app.post('/api/signup', async (req, res) => {
         email,
         role
       };
-      res.cookie('token', token, {
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true
+      })
+      res.cookie('accessToken', accessToken, {
         httpOnly: true
       })
 
       return res.json({
         message: 'User created!',
-        token,
         userInfo,
-        expiresAt
+        refreshExpiresAt,
+        accessExpiresAt
       });
     } else {
       return res.status(400).json({
@@ -144,38 +159,66 @@ app.post('/api/signup', async (req, res) => {
 });
 
 ///////////////////////
+const checkRefreshJwt = jwt({
+  secret: process.env.JWT_SECRET,
+  issuer: 'api.orbit',
+  audience: 'api.orbit',
+  getToken: req => req.cookies.refreshToken
 
+})
+
+app.post('/api/refresh-token', checkRefreshJwt, (req, res) => {
+  try {
+    const userInfo = req.body
+    const accessToken = createToken(userInfo, "3000"); //15 mins\
+
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true
+    })
+
+    res.json({
+      message: 'Token refreshed',
+      accessExpiresAt
+    });
+  } catch (err) {
+    console.log('error')
+    return res.status(401).json({ message: 'Problem refreshing token' })
+  }
+
+});
+//FIXME fix expires at of access token
+//FIXME error should be around here
 const attachUser = (req, res, next) => {
-  const token = req.cookies.token;
-  if (!token) {
+  const accessToken = req.cookies.accessToken;
+  if (!accessToken) {
     return res
       .status(401)
       .json({ message: 'Authentication invalid' });
   }
-  const decodedToken = jwtDecode(token);
+  const decodedAccessToken = jwtDecode(accessToken);
 
-  if (!decodedToken) {
+  if (!decodedAccessToken) {
     return res
       .status(401)
       .json({
         message:
           'There was a problem authorizing the request'
       });
+
   } else {
-    req.user = decodedToken;
+    req.user = decodedAccessToken;
     next();
   }
 
 }
 
-//TODO uncomment thislol
 app.use(attachUser);
 
-const checkJwt = jwt({
+const checkAccessJwt = jwt({
   secret: process.env.JWT_SECRET,
   issuer: 'api.orbit',
   audience: 'api.orbit',
-  getToken: req => req.cookies.token
+  getToken: req => req.cookies.accessToken
 })
 
 const requireAdmin = (req, res, next) => {
@@ -186,11 +229,12 @@ const requireAdmin = (req, res, next) => {
   next();
 }
 
-app.get('/api/dashboard-data', checkJwt, (req, res) => {
+
+app.get('/api/dashboard-data', checkAccessJwt, (req, res) => {
   return res.json(dashboardData)
 });
 
-app.patch('/api/user-role', checkJwt, requireAdmin, async (req, res) => {
+app.patch('/api/user-role', checkAccessJwt, requireAdmin, async (req, res) => {
   try {
     const { role } = req.body;
     const allowedRoles = ['user', 'admin'];
@@ -213,7 +257,7 @@ app.patch('/api/user-role', checkJwt, requireAdmin, async (req, res) => {
   }
 });
 
-app.get('/api/inventory', checkJwt, requireAdmin, async (req, res) => {
+app.get('/api/inventory', checkAccessJwt, requireAdmin, async (req, res) => {
   try {
     const { sub } = req.user;
     const inventoryItems = await InventoryItem.find({
@@ -225,7 +269,7 @@ app.get('/api/inventory', checkJwt, requireAdmin, async (req, res) => {
   }
 });
 
-app.post('/api/inventory', checkJwt, requireAdmin, async (req, res) => {
+app.post('/api/inventory', checkAccessJwt, requireAdmin, async (req, res) => {
   try {
     const { sub } = req.user;
     const input = Object.assign({}, req.body, {
@@ -245,7 +289,7 @@ app.post('/api/inventory', checkJwt, requireAdmin, async (req, res) => {
   }
 });
 
-app.delete('/api/inventory/:id', checkJwt, requireAdmin, async (req, res) => {
+app.delete('/api/inventory/:id', checkAccessJwt, requireAdmin, async (req, res) => {
   try {
     const { sub } = req.user;
     const deletedItem = await InventoryItem.findOneAndDelete(
@@ -262,7 +306,7 @@ app.delete('/api/inventory/:id', checkJwt, requireAdmin, async (req, res) => {
   }
 });
 
-app.get('/api/users', checkJwt, requireAdmin, async (req, res) => {
+app.get('/api/users', checkAccessJwt, requireAdmin, async (req, res) => {
   try {
     const users = await User.find()
       .lean()
@@ -326,16 +370,19 @@ app.patch('/api/bio', async (req, res) => {
 
 app.post('/api/logout', async (req, res) => {
   try {
-    res.cookie('token', 'DeLeTeD!', {
+    res.cookie('refreshToken', 'DeLeTeD!', {
       httpOnly: true,
       expires: 0
     })
-
+    res.cookie('accessToken', 'DeLeTeD!', {
+      httpOnly: true,
+      expires: 0
+    })
     res.json({
       message: 'Logout successful!',
     });
   } catch (err) {
-    return res.status(400).json({ message: 'There was a problem' })
+    return res.status(400).json({ message: 'There wsas a problem' })
   }
 })
 

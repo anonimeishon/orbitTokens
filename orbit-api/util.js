@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
-const createToken = user => {
+const createToken = (user, expireTime) => {
   // Sign the JWT
   if (!user.role) {
     throw new Error('No user role specified');
@@ -15,7 +15,9 @@ const createToken = user => {
       aud: 'api.orbit'
     },
     process.env.JWT_SECRET,
-    { algorithm: 'HS256', expiresIn: '1h' }
+    { algorithm: 'HS256', expiresIn: expireTime }
+    // { algorithm: 'HS256', expiresIn: "5000" }
+
   );
 };
 

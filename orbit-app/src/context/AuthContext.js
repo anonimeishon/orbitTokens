@@ -12,11 +12,13 @@ const AuthProvider = ({ children }) => {
   const history = useHistory();
 
   const [authState, setAuthState] = useState(() => {
-    const expiresAt = sessionStorage.getItem('expiresAt');
+    const refreshExpiresAt = sessionStorage.getItem('refreshExpiresAt');
+    const accessExpiresAt = sessionStorage.getItem('accessExpiresAt');
     const userInfo = sessionStorage.getItem('userInfo');
     return (
       {
-        expiresAt,
+        refreshExpiresAt,
+        accessExpiresAt,
         userInfo: userInfo ? JSON.parse(userInfo) : {}
       });
   });
@@ -24,24 +26,30 @@ const AuthProvider = ({ children }) => {
 
 
   useEffect(() => {
-    sessionStorage.setItem('expiresAt', authState.expiresAt);
+
+    sessionStorage.setItem('refreshExpiresAt', authState.refreshExpiresAt);
+    sessionStorage.setItem('accessExpiresAt', authState.accessExpiresAt);
     sessionStorage.setItem('userInfo', JSON.stringify(authState.userInfo));
 
   }, [authState])
 
-  const setAuthInfo = ({ userInfo, expiresAt }) => {
+  const setAuthInfo = ({ userInfo, refreshExpiresAt, accessExpiresAt }) => {
     setAuthState({
       userInfo,
-      expiresAt
+      refreshExpiresAt,
+      accessExpiresAt
     });
   };
 
   const logout = () => {
-    localStorage.removeItem('userInfo');
-    localStorage.removeItem('expiresAt');
+
+    sessionStorage.removeItem('userInfo');
+    sessionStorage.removeItem('refreshExpiresAt');
+    sessionStorage.removeItem('accessExpiresAt')
     setAuthState(
       {
-        expiresAt: null,
+        refreshExpiresAt: null,
+        accessExpiresAt: null,
         userInfo: {}
       }
     );
@@ -49,10 +57,18 @@ const AuthProvider = ({ children }) => {
   }
 
   const isAuthenticated = () => {
-    if (!authState.expiresAt) {
+    if (!authState.refreshExpiresAt) {
       return false;
     }
-    return new Date().getTime() / 1000 < authState.expiresAt
+    // return new Date().getTime() / 1000 < authState.expiresAt
+    if (new Date().getTime() / 1000 < authState.refreshExpiresAt) {
+      return true;
+    } else {
+      sessionStorage.removeItem('userInfo');
+      sessionStorage.removeItem('refreshExpiresAt');
+      sessionStorage.removeItem('accessExpiresAt');
+      return false;
+    }
   }
   const isAdmin = () => {
     return authState.userInfo.role === 'admin';
