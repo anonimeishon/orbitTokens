@@ -45,9 +45,8 @@ app.post('/api/authenticate', async (req, res) => {
     if (passwordValid) {
       const { password, bio, ...rest } = user;
       const userInfo = Object.assign({}, { ...rest });
-
       const refreshToken = createToken(userInfo, "8h"); // 8 hours
-      const accessToken = createToken(userInfo, "3000"); //15 mins
+      const accessToken = createToken(userInfo, "900000"); //15 mins 900000ms
       const decodedRefreshToken = jwtDecode(refreshToken);
       const decodedAccessToken = jwtDecode(accessToken);
 
@@ -112,7 +111,7 @@ app.post('/api/signup', async (req, res) => {
 
     if (savedUser) {
       const refreshToken = createToken(savedUser, "8h");
-      const accessToken = createToken(savedUser, "3000")
+      const accessToken = createToken(savedUser, "30000")
 
       const decodedRefreshToken = jwtDecode(refreshToken);
       const decodedAccessToken = jwtDecode(accessToken);
@@ -159,6 +158,15 @@ app.post('/api/signup', async (req, res) => {
 });
 
 ///////////////////////
+
+
+const checkAccessJwt = jwt({
+  secret: process.env.JWT_SECRET,
+  issuer: 'api.orbit',
+  audience: 'api.orbit',
+  getToken: req => req.cookies.accessToken
+})
+
 const checkRefreshJwt = jwt({
   secret: process.env.JWT_SECRET,
   issuer: 'api.orbit',
@@ -167,37 +175,18 @@ const checkRefreshJwt = jwt({
 
 })
 
-app.post('/api/refresh-token', checkRefreshJwt, (req, res) => {
-  try {
-    const userInfo = req.body
-    const accessToken = createToken(userInfo, "3000"); //15 mins\
 
-    res.cookie('accessToken', accessToken, {
-      httpOnly: true
-    })
 
-    res.json({
-      message: 'Token refreshed',
-      accessExpiresAt
-    });
-  } catch (err) {
-    console.log('error')
-    return res.status(401).json({ message: 'Problem refreshing token' })
-  }
-
-});
-//FIXME fix expires at of access token
-//FIXME error should be around here
 const attachUser = (req, res, next) => {
-  const accessToken = req.cookies.accessToken;
-  if (!accessToken) {
+  const refreshToken = req.cookies.refreshToken;
+  if (!refreshToken) {
     return res
       .status(401)
       .json({ message: 'Authentication invalid' });
   }
-  const decodedAccessToken = jwtDecode(accessToken);
+  const decodedRefreshToken = jwtDecode(refreshToken);
 
-  if (!decodedAccessToken) {
+  if (!decodedRefreshToken) {
     return res
       .status(401)
       .json({
@@ -206,7 +195,7 @@ const attachUser = (req, res, next) => {
       });
 
   } else {
-    req.user = decodedAccessToken;
+    req.user = decodedRefreshToken;
     next();
   }
 
@@ -214,12 +203,28 @@ const attachUser = (req, res, next) => {
 
 app.use(attachUser);
 
-const checkAccessJwt = jwt({
-  secret: process.env.JWT_SECRET,
-  issuer: 'api.orbit',
-  audience: 'api.orbit',
-  getToken: req => req.cookies.accessToken
-})
+
+app.post('/api/refresh-token', checkRefreshJwt, (req, res) => {
+  try {
+    const userInfo = req.body;
+    const accessToken = createToken(userInfo, "900000"); //15 mins 900000
+    const { exp: accessExpiresAt } = jwtDecode(accessToken);
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true
+    })
+    res.json({
+      message: 'Token refreshed',
+      accessExpiresAt
+    });
+
+  } catch (err) {
+    console.log(err)
+    return res.status(401).json({ message: 'Problem refreshing token' })
+  }
+});
+
+
+
 
 const requireAdmin = (req, res, next) => {
   const { role } = req.user;
