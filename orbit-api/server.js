@@ -10,13 +10,16 @@ const dashboardData = require('./data/dashboard');
 const User = require('./data/User');
 const InventoryItem = require('./data/InventoryItem');
 const jwt = require('express-jwt');
+const app = express();
+const http = require('http');
+const server = http.createServer(app);
+const io = require('socket.io')(server);
 const {
   createToken,
   hashPassword,
   verifyPassword
 } = require('./util');
 
-const app = express();
 
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -233,6 +236,11 @@ const requireAdmin = (req, res, next) => {
   }
   next();
 }
+///////////////////////////////////////
+
+io.on('connection', (socket) => {
+  console.log('a user connected');
+});
 
 
 app.get('/api/dashboard-data', checkAccessJwt, (req, res) => {
@@ -387,9 +395,24 @@ app.post('/api/logout', async (req, res) => {
       message: 'Logout successful!',
     });
   } catch (err) {
-    return res.status(400).json({ message: 'There wsas a problem' })
+    return res.status(400).json({ message: 'There was a problem' })
   }
 })
+//TODO how to check for expired token when connected
+//TODO how to check for expired token after a while of being connected
+//  https://stackoverflow.com/questions/33316013/node-js-socket-io-get-cookie-value
+// https://stackoverflow.com/questions/39271952/parsing-cookies-with-socket-io/45409633
+const namespace = io.of('/chat');
+namespace.use(function (socket, next) {
+  const token = socket.handshake.query.jwt;
+  jwt.verify()
+})
+io.on('connection', (socket) => {
+  console.log('a user connected');
+  socket.on('disconnect', function () {
+    console.log('A user disconnected');
+  });
+});
 
 async function connect() {
   try {
@@ -402,8 +425,11 @@ async function connect() {
   } catch (err) {
     console.log('Mongoose error', err);
   }
-  app.listen(3001);
+  server.listen(3001);
   console.log('API listening on localhost:3001');
 }
 
+// http.listen(3002, () => {
+//   console.log('listening on *:3002');
+// });
 connect();

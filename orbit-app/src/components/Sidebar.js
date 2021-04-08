@@ -6,7 +6,8 @@ import {
   faAddressCard,
   faChartPie,
   faCogs,
-  faDoorOpen
+  faDoorOpen,
+  faCommentDots
 } from '@fortawesome/free-solid-svg-icons';
 import { Link, useLocation } from 'react-router-dom';
 import logo from './../images/logo.png';
@@ -29,6 +30,12 @@ const navItems = [
     label: 'Account',
     path: 'account',
     icon: faAddressCard,
+    allowedRoles: ['user', 'admin']
+  },
+  {
+    label: 'Chat',
+    path: 'chat',
+    icon: faCommentDots,
     allowedRoles: ['user', 'admin']
   },
   {

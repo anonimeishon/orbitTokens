@@ -13,6 +13,7 @@ import FourOFour from './pages/FourOFour';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import Chat from './pages/Chat'
 
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Inventory = lazy(() => import('./pages/Inventory'))
@@ -70,6 +71,9 @@ const AppRoutes = () => {
         </AdminRoute>
         <AuthenticatedRoute path="/account">
           <Account />
+        </AuthenticatedRoute>
+        <AuthenticatedRoute path="/chat">
+          <Chat />
         </AuthenticatedRoute>
         <AuthenticatedRoute path="/settings">
           <Settings />
