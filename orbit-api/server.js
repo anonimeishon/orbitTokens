@@ -10,10 +10,13 @@ const dashboardData = require('./data/dashboard');
 const User = require('./data/User');
 const InventoryItem = require('./data/InventoryItem');
 const jwt = require('express-jwt');
+const jwtt = require('jsonwebtoken');
 const app = express();
 const http = require('http');
 const server = http.createServer(app);
-const io = require('socket.io')(server);
+const io = require('socket.io')(server, {
+  cors: 'http:localhost:3000'
+});
 const {
   createToken,
   hashPassword,
@@ -402,15 +405,56 @@ app.post('/api/logout', async (req, res) => {
 //TODO how to check for expired token after a while of being connected
 //  https://stackoverflow.com/questions/33316013/node-js-socket-io-get-cookie-value
 // https://stackoverflow.com/questions/39271952/parsing-cookies-with-socket-io/45409633
-const namespace = io.of('/chat');
-namespace.use(function (socket, next) {
-  const token = socket.handshake.query.jwt;
-  jwt.verify()
+
+const chatNamespace = io.of('/chat');
+
+// chatNamespace.use(checkRefreshJwt)
+
+const disconnectOnExpiredToken = (token, socket) => {
+  console.log(token)
+}
+
+chatNamespace.use((socket, next) => {
+  const token = socket.handshake.headers.cookie.slice(310, 593);
+  // console.log(token)
+  try {
+    jwtt.verify(token, process.env.JWT_SECRET);
+    next()
+  } catch (err) {
+    console.log(err.message)
+    res.status(401).json({ message: 'Invalid token' })
+  }
 })
+
+chatNamespace.on("connection", (socket) => {
+  console.log('a user connected to chat')
+  /*
+Se desconecta el socket luego de 15 mins,
+Del lado del cliente se debe renovar al conexion cada 10-14mins
+*/
+  setTimeout(() => { socket.disconnect() }, 900000)
+  socket.on('hey', (data) => {
+    // console.log(socket.handshake.headers.cookie)
+    // socket.disconnect()
+    socket.broadcast.emit('newHey', data)
+  })
+  socket.on('disconnect', (reason) => {
+    console.log('A user disconnected from chat because of', reason);
+  })
+
+
+})
+
+
+
+
+
+
+
 io.on('connection', (socket) => {
   console.log('a user connected');
-  socket.on('disconnect', function () {
-    console.log('A user disconnected');
+  socket.on('disconnect', (reason) => {
+    console.log('A user disconnected ', reason);
   });
 });
 
@@ -428,7 +472,6 @@ async function connect() {
   server.listen(3001);
   console.log('API listening on localhost:3001');
 }
-
 // http.listen(3002, () => {
 //   console.log('listening on *:3002');
 // });

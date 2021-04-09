@@ -31,7 +31,21 @@ const FetchProvider = ({ children }) => {
 
 
 
+  const refreshToken = async () => {
+    try {
+      const { data } = await authAxios.post(
+        'refresh-token',
+        authContext.authState.userInfo
+      );
+      authContext.setAuthState({
+        ...authContext.authState,
+        accessExpiresAt: data.accessExpiresAt
+      })
 
+    } catch (err) {
+      console.error(err.message);
+    }
+  }
 
 
   useEffect(() => {
@@ -73,7 +87,7 @@ const FetchProvider = ({ children }) => {
   return (
     <Provider
       value={{
-        authAxios
+        authAxios, refreshToken
       }}
     >
       {children}

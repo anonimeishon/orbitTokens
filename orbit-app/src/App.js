@@ -13,8 +13,8 @@ import FourOFour from './pages/FourOFour';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
-import Chat from './pages/Chat'
 
+const Chat = lazy(() => import('./pages/Chat'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Inventory = lazy(() => import('./pages/Inventory'))
 const Account = lazy(() => import('./pages/Account'))
