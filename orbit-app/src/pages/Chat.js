@@ -3,32 +3,32 @@ import PageTitle from '../components/common/PageTitle';
 import io from 'socket.io-client';
 
 const socket = io("/chat", {
-    // widhCredentials: true
+    // withCredentials: true
 });
-const emitBread = () => {
-    console.log('bread')
 
-
-
-}
 export default function Chat() {
     const [text, setText] = useState("Empty")
+    const [count, setCount] = useState(0)
 
     useEffect(() => {
-        //   if(socket){
 
-        //   }
-        setTimeout(() => {
-            if (socket.io.engine) {
-                //TODO this ends the connection after 5 seconds, i have to find a way to restart the connection
-                socket.io.engine.close();
-                //TODO this starts a new connection, have to manage this to be able to start a new connection every 10 minutes
-                socket.io.engine.open();
-                console.log(socket.io.engine)
+        const restartSocket = async () => {
+            try {
+                if (socket.io.engine) {
+                    socket.io.engine.close();
+                    socket.io.engine.open();
+                }
+            } catch (err) {
+                console.error(err.message)
             }
-        }, 600000)
-        //TODO just doing it every render of the page
-    }, [])
+        }
+
+        setTimeout(() => {
+            setCount((old) => old + 1)
+            restartSocket()
+        }, 60000)
+        console.log(count);
+    }, [count])
 
     useEffect(() => {
         socket.on('listening', () => {
